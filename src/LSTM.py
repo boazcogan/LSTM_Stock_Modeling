@@ -47,6 +47,6 @@ class LSTMHandler(Handler):
             pred = self.model.forward(x)
             optimizer.zero_grad()
             loss = criterion(pred, y)
-            print('Epoch {}: train loss: {}'.format(epoch, loss.item()))
+            print('Epoch {}:\t train loss: {}'.format(epoch, loss.item()))
             loss.backward()
             optimizer.step()

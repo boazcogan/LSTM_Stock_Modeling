@@ -37,7 +37,7 @@ class MLPHandler(Handler):
         x = torch.FloatTensor(x)
         y = torch.FloatTensor(y)
         criterion = torch.nn.MSELoss()
-        optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate)
+        optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
         self.model.eval()
         y_pred = self.model(x)
         before_train = criterion(y_pred.squeeze(), y)
@@ -50,7 +50,7 @@ class MLPHandler(Handler):
             # Compute Loss
             loss = criterion(y_pred.squeeze(), y)
 
-            print('Epoch {}: train loss: {}'.format(epoch, loss.item()))
+            print('Epoch {}:\t train loss: {}'.format(epoch, loss.item()))
             # Backward pass
             loss.backward()
             optimizer.step()
