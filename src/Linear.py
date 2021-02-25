@@ -40,7 +40,7 @@ class LinearHandler(Handler):
         else:
             print("Loss method not recognized, defaulting to MSE")
             criterion = torch.nn.MSELoss()
-        optimizer = torch.optim.SGD(self.model.parameters(), self.learning_rate)
+        optimizer = torch.optim.Adam(self.model.parameters(), self.learning_rate)
         inputs = Variable(torch.from_numpy(x))
         labels = Variable(torch.from_numpy(y))
         for epoch in range(self.epochs):
@@ -49,4 +49,4 @@ class LinearHandler(Handler):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            print('epoch {}, loss {}'.format(epoch, loss.item()))
+            print('epoch {}:\t loss {}'.format(epoch, loss.item()/x.size))

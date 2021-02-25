@@ -1,8 +1,10 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
 from torch.autograd import Variable
-
+from data.GetDataset import normalized_returns
+from math import sqrt
 
 class MyCustomLoss(nn.Module):
     def __init__(self, alpha=2, method='binary', regularization='none', model=None):
@@ -36,16 +38,20 @@ class MyCustomLoss(nn.Module):
     def binary_loss():
         return torch.nn.BCELoss()
 
-
     @staticmethod
     def reg_loss():
         return torch.nn.MSELoss()
 
-    def sharpe_loss(self):
-        return self.binary_loss()
+    def sharpe_loss(self, inputs, target):
+        ret_loss = self.return_loss(inputs, target)
+        # same 1 placeholder as in self.return_loss()
+        z = np.sum(np.sign(target) * .15 / 1 * (target[len(target)-1][0] - target[0][0]) ** 2) / len(target)
+        return ret_loss * sqrt(252) / sqrt(z - ret_loss ** 2)
 
-    def return_loss(self):
-        return self.binary_loss()
+    def return_loss(self, inputs, target):
+        # page 3, equation 1: sig_t^i is the ex-ante volatility estimate
+        # not sure how to implement in our context; dividing by 1 where sig_t^i should be
+        return np.sum(np.sign(target) * .15 / 1 * (target[len(target)-1][0] - target[0][0])) / len(target)
 
     def get_regularization(self, loss):
         if self.regularization == 'L1':
