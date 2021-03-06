@@ -67,4 +67,4 @@ class LSTMHandler(Handler):
         criterion = torch.nn.MSELoss()
         pred = self.model.forward(x)
         loss = criterion(pred, y)
-        return loss
+        return loss, pred

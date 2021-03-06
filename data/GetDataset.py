@@ -162,7 +162,7 @@ def get_normal_dataset(name, ratio, target_lookahead, normalize=True):
     return train_x.astype(np.float32), train_y.astype(np.float32), test_x.astype(np.float32), test_y.astype(np.float32)
 
 
-def get_dataset_by_category(name, ratio):
+def get_dataset_by_category(name, ratio, method='normalized_returns', target_lookahead=2, aggregate_days=5):
     """
     Split the dataset into categories where each category represents a different company. This split uses the simple
     features and labels
@@ -180,7 +180,10 @@ def get_dataset_by_category(name, ratio):
     # instantiate array values
     train_x, train_y, test_x, test_y = None, None, None, None
     for i in range(len(dataset)):
-        features, targets = parse_raw_features_targets(dataset[i])
+        if method == "normalized_returns":
+            features, targets = parse_file(dataset[i], aggregate_days, target_lookahead)
+        elif method == "sanity_check":
+            features, targets = parse_raw_features_targets(dataset[i])
         if train_x is None:
             train_x = [features[:int(ratio * features.shape[0])]]
             train_y = [targets[:int(ratio * features.shape[0])]]
