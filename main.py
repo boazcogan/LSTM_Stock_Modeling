@@ -37,7 +37,7 @@ def model_trading(actual, preds, lookahead):
 
 
 if __name__ == '__main__':
-    blocks = ['LSTM']
+    blocks = ['LSTM', 'linear', 'MLP']
     method = 'by_category'
     if method == 'aggregated':
         if 'linear' in blocks or 'MLP' in blocks:
@@ -79,7 +79,7 @@ if __name__ == '__main__':
         if 'LSTM' in blocks:
             train_features, train_targets, test_features, test_targets = gd.get_normal_dataset("commodities", 0.9, 7, normalize=True)
             print('\n\n\n----- LSTM -----')
-            lstm = LSTMHandler(100, "MSE", None, 0.01, 0)
+            lstm = LSTMHandler(100, "return", None, 0.01, 0)
             lstm.create_model(train_features.shape[1], 15, 1, 1)
             lstm_losses = lstm.train(train_features, train_targets)
             plt.figure(0)
@@ -94,20 +94,26 @@ if __name__ == '__main__':
     elif method == 'by_category':
         if 'linear' in blocks or 'MLP' in blocks:
             train_features, train_targets, test_features, test_targets = gd.get_dataset_by_category("commodities", 0.9, aggregate_days=5, target_lookahead=2)
+            train_features = np.concatenate(train_features).astype(np.float32)
+            train_targets = np.concatenate(train_targets).astype(np.float32)
         if 'linear' in blocks:
             batch_size = 256
             print('----- Linear -----')
             linear = LinearHandler(100, "MSE", None, 0.01, batch_size)
             linear.create_model(train_features.shape[1], 1)
             linear_losses = linear.train(train_features, train_targets)
-            plt.figure(0)
-            plt.title("Linear Loss")
-            plt.ylabel("loss")
-            plt.yscale('log')
-            plt.xlabel("epoch")
-            plt.plot(linear_losses)
-            plt.show()
-            linear_MSE, predictions = linear.test(test_features, test_targets)
+            # plt.figure(0)
+            # plt.title("Linear Loss")
+            # plt.ylabel("loss")
+            # plt.yscale('log')
+            # plt.xlabel("epoch")
+            # plt.plot(linear_losses)
+            # plt.show()
+            _predictions = []
+            for i in range(test_features.shape[0]):
+                _, pred = linear.test(test_features[i].astype(np.float32), test_targets[i].astype(np.float32))
+                _predictions.append(pred.detach().numpy())
+            linear_performance = model_trading(test_targets, _predictions, lookahead=2)
             # print(f"\nThe MSE for the Linear test set is: {linear.test(test_features, test_targets)}\n\n")
 
         if 'MLP' in blocks:
@@ -118,14 +124,18 @@ if __name__ == '__main__':
             # Looks like just 1 hidden + 1 output
             mlp.create_model(train_features.shape[1], 15, 1)
             mlp_losses = mlp.train(train_features, np.squeeze(train_targets))
-            plt.figure(0)
-            plt.title("MLP Loss")
-            plt.ylabel("loss")
-            plt.yscale('log')
-            plt.xlabel("epoch")
-            plt.plot(mlp_losses)
-            plt.show()
-            MLP_MSE, predictions = mlp.test(test_features, np.squeeze(test_targets))
+            # plt.figure(0)
+            # plt.title("MLP Loss")
+            # plt.ylabel("loss")
+            # plt.yscale('log')
+            # plt.xlabel("epoch")
+            # plt.plot(mlp_losses)
+            # plt.show()
+            _predictions = []
+            for i in range(test_features.shape[0]):
+                _, pred = mlp.test(test_features[i].astype(np.float32), np.squeeze(test_targets[i].astype(np.float32)))
+                _predictions.append(pred.detach().numpy())
+            mlp_performance = model_trading(test_targets, _predictions, lookahead=2)
             # print(f"\nThe MSE for the MLP test set is: {linear.test(test_features, np.squeeze(test_targets))}\n\n")
 
         if 'LSTM' in blocks:
@@ -140,17 +150,25 @@ if __name__ == '__main__':
             lstm = LSTMHandler(100, "MSE", None, 0.01, 0)
             lstm.create_model(train_features.shape[1], 15, 1, 1)
             lstm_losses = lstm.train(train_features, train_targets)
-            plt.figure(0)
-            plt.title("lstm Loss")
-            plt.ylabel("loss")
-            plt.yscale('log')
-            plt.xlabel("epoch")
-            plt.plot(lstm_losses)
-            plt.show()
+            # plt.figure(0)
+            # plt.title("lstm Loss")
+            # plt.ylabel("loss")
+            # # plt.yscale('log')
+            # plt.xlabel("epoch")
+            # plt.plot(np.squeeze(lstm_losses))
+            # plt.show()
             # print(f"\nThe MSE for the LSTM test set is: {linear.test(test_features, test_targets)}\n\n")
             for i in range(test_features.shape[0]):
                 _, pred = lstm.test(test_features[i].astype(np.float32), test_targets[i].astype(np.float32))
                 _predictions.append(pred.detach().numpy())
             lstm_performance = model_trading(test_targets, _predictions, lookahead=2)
             best_possible_performance = model_trading(test_targets, test_targets, lookahead=2)
-            print()
+
+        plt.plot(lstm_performance[::5], c='r', label='LSTM')
+        plt.plot(linear_performance[::2], c='b', label='Linear')
+        plt.plot(mlp_performance, c='g', label='MLP')
+        plt.legend()
+        plt.xlabel('Time')
+        plt.ylabel('Growth Ratio')
+        plt.title('Cumulative Returns - MSE')
+        plt.show()

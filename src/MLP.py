@@ -4,6 +4,8 @@ reference: https://medium.com/biaslyai/pytorch-introduction-to-neural-network-fe
 
 import torch
 from src.Handler import *
+import numpy as np
+from math import sqrt
 
 
 class MLP(torch.nn.Module):
@@ -34,7 +36,7 @@ class MLPHandler(Handler):
         self.model = MLP(input_shape, hidden_shape, output_shape)
 
     def train(self, x, y):
-        criterion = torch.nn.MSELoss()
+        criterion = mse_loss
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
         self.model.eval()
         # y_pred = self.model(x)
@@ -71,3 +73,29 @@ class MLPHandler(Handler):
         y_pred = self.model(x)
         loss = criterion(y_pred.squeeze(), y)
         return loss, y_pred
+
+def return_loss(inputs, target):
+    # page 3, equation 1: sig_t^i is the ex-ante volatility estimate
+    # not sure how to implement in our context; dividing by 1 where sig_t^i should be'
+    volatility_scaling = 1
+    sig_tgt = .15
+    return torch.mean(np.sign(target) * inputs) * -1
+
+def mse_loss(output, target):
+    volatility_scaling = 1
+    loss = torch.mean((output - (target / volatility_scaling))**2)
+    return loss
+
+def binary_loss(inputs, target):
+    volatility_scaling = 1
+    loss = torch.log(target)
+
+def sharpe_loss(inputs, target):
+    n_days = 252
+    # R_it is the return given by the targets
+    R_it = torch.sum(target ** 2) / len(inputs)
+
+    loss = torch.mean(inputs) * sqrt(n_days)
+    loss /= torch.sqrt(torch.abs(R_it - torch.mean(torch.pow(inputs, 2))))
+
+    return loss * -1
