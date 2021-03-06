@@ -29,8 +29,8 @@ class LSTM(torch.nn.Module):
 
 
 class LSTMHandler(Handler):
-    def __init__(self, epochs, loss_method, regularization_method, learning_rate):
-        super(LSTMHandler, self).__init__(epochs, loss_method, regularization_method, learning_rate)
+    def __init__(self, epochs, loss_method, regularization_method, learning_rate, batch_size):
+        super(LSTMHandler, self).__init__(epochs, loss_method, regularization_method, learning_rate, batch_size)
 
     def create_model(self, input_shape, hidden_shape, output_shape, num_layers):
         self.model = LSTM(input_shape, hidden_shape, output_shape, num_layers)
@@ -40,7 +40,7 @@ class LSTMHandler(Handler):
         y = Variable(torch.FloatTensor(y))
 
         x = torch.reshape(x, (x.shape[0], 1, x.shape[1]))
-
+        avg_losses = []
         criterion = torch.nn.MSELoss()
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
         for epoch in range(self.epochs):
@@ -48,5 +48,23 @@ class LSTMHandler(Handler):
             optimizer.zero_grad()
             loss = criterion(pred, y)
             print('Epoch {}:\t train loss: {}'.format(epoch, loss.item()))
+            avg_losses.append(loss.item())
             loss.backward()
             optimizer.step()
+        return avg_losses
+
+    def predict(self, data):
+        x = Variable(torch.FloatTensor(data))
+        x = torch.reshape(x, (x.shape[0], 1, x.shape[1]))
+        pred = self.model.forward(x)
+        return pred
+
+    def test(self, x, y):
+        x = Variable(torch.FloatTensor(x))
+        y = Variable(torch.FloatTensor(y))
+
+        x = torch.reshape(x, (x.shape[0], 1, x.shape[1]))
+        criterion = torch.nn.MSELoss()
+        pred = self.model.forward(x)
+        loss = criterion(pred, y)
+        return loss

@@ -27,30 +27,47 @@ class MLP(torch.nn.Module):
 
 class MLPHandler(Handler):
 
-    def __init__(self, epochs, loss_method, regularization_method, learning_rate):
-        super(MLPHandler, self).__init__(epochs, loss_method, regularization_method, learning_rate)
+    def __init__(self, epochs, loss_method, regularization_method, learning_rate, batch_size):
+        super(MLPHandler, self).__init__(epochs, loss_method, regularization_method, learning_rate, batch_size)
 
     def create_model(self, input_shape, hidden_shape, output_shape):
         self.model = MLP(input_shape, hidden_shape, output_shape)
 
     def train(self, x, y):
-        x = torch.FloatTensor(x)
-        y = torch.FloatTensor(y)
         criterion = torch.nn.MSELoss()
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
         self.model.eval()
-        y_pred = self.model(x)
-        before_train = criterion(y_pred.squeeze(), y)
-        print('Test loss before training', before_train.item())
+        # y_pred = self.model(x)
+        # before_train = criterion(y_pred.squeeze(), y)
+        # print('Test loss before training', before_train.item())
         self.model.train()
-        for epoch in range(self.epochs):
-            optimizer.zero_grad()
-            # Forward pass
-            y_pred = self.model(x)
-            # Compute Loss
-            loss = criterion(y_pred.squeeze(), y)
+        avg_losses = []
 
-            print('Epoch {}:\t train loss: {}'.format(epoch, loss.item()))
-            # Backward pass
-            loss.backward()
-            optimizer.step()
+        for epoch in range(self.epochs):
+            total_loss = 0
+            for i in range(0, x.shape[0], self.batch_size):
+                features = torch.FloatTensor(x[i:i+self.batch_size])
+                labels = torch.FloatTensor(y[i:i+self.batch_size])
+                optimizer.zero_grad()
+                # Forward pass
+                y_pred = self.model(features)
+                # Compute Loss
+                loss = criterion(y_pred.squeeze(), labels)
+
+                # print('Epoch {}:\t train loss: {}'.format(epoch, loss.item()))
+                # avg_losses.append(loss.item())
+                # Backward pass
+                loss.backward()
+                optimizer.step()
+                total_loss += loss.item()
+            avg_losses.append(total_loss / x.size)
+            print('epoch {}:\t loss {}'.format(epoch, total_loss / x.size))
+        return avg_losses
+
+    def test(self, x, y):
+        x = torch.FloatTensor(x)
+        y = torch.FloatTensor(y)
+        criterion = torch.nn.MSELoss()
+        y_pred = self.model(x)
+        loss = criterion(y_pred.squeeze(), y)
+        return loss, y_pred
