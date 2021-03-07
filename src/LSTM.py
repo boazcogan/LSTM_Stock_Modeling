@@ -16,45 +16,73 @@ class LSTM(torch.nn.Module):
         self.hidden_shape = hidden_shape
         self.num_layers = num_layers
         self.lstm = nn.LSTM(input_size=input_shape, hidden_size=hidden_shape,num_layers=num_layers, batch_first=True)
+        self.relu = torch.nn.ReLU()
         self.linear = nn.Linear(hidden_shape, output_shape)
+        self.dropout1 = torch.nn.Dropout(0.5)
+        self.dropout2 = torch.nn.Dropout(0.5)
+        self.tanh = torch.nn.Tanh()
         # self.hidden_cell = (torch.zeros(1, 1, self.hidden_shape),
         #                     torch.zeros(1, 1, self.hidden_shape))
 
-    def forward(self, x):
+    def forward(self, x, h_n, c_n):
         # hidden state
-        h_0 = Variable(torch.zeros(self.num_layers, x.size(0), self.hidden_shape))
+        # h_0 = Variable(torch.zeros(self.num_layers, x.size(0), self.hidden_shape))
         # current state
-        c_0 = Variable(torch.zeros(self.num_layers, x.size(0), self.hidden_shape))
-        output, (hn, cn) = self.lstm(x, (h_0, c_0))
-        hn = hn.view(-1, self.hidden_shape)
-        pred = self.linear(hn)
-        return pred
+        # c_0 = Variable(torch.zeros(self.num_layers, x.size(0), self.hidden_shape))
+        output, (h_n, c_n) = self.lstm(x, (h_n, c_n))
+        output = output.view(-1, self.hidden_shape)
+        dropout1 = self.dropout1(output)
+        activ1 = self.relu(dropout1)
+        pred = self.linear(activ1)
+        dropout2 = self.dropout2(pred)
+        activ2 = self.tanh(dropout2)
+        return activ2, h_n, c_n
 
 
 class LSTMHandler(Handler):
-    def __init__(self, epochs, loss_method, regularization_method, learning_rate, batch_size):
-        super(LSTMHandler, self).__init__(epochs, loss_method, regularization_method, learning_rate, batch_size)
+    def __init__(self, epochs, loss_method, regularization_method, learning_rate, batch_size, l1enable=False):
+        super(LSTMHandler, self).__init__(epochs, loss_method, regularization_method, learning_rate, batch_size, l1enable)
 
     def create_model(self, input_shape, hidden_shape, output_shape, num_layers):
         self.model = LSTM(input_shape, hidden_shape, output_shape, num_layers)
 
     def train(self, x, y):
-        x = Variable(torch.FloatTensor(x))
-        y = Variable(torch.FloatTensor(y))
-
-        x = torch.reshape(x, (x.shape[0], 1, x.shape[1]))
+        # x = Variable(torch.FloatTensor(x))
+        # y = Variable(torch.FloatTensor(y))
+        #
+        # x = torch.reshape(x, (x.shape[0], 1, x.shape[1]))
         avg_losses = []
-        criterion = mse_loss
-        # criterion = MyCustomLoss(method=self.loss_method)
+        criterion = sharpe_loss
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
         for epoch in range(self.epochs):
-            pred = self.model.forward(x)
-            optimizer.zero_grad()
-            loss = criterion(pred, y)
-            print('Epoch {}:\t train loss: {}'.format(epoch, loss))
-            avg_losses.append(loss.detach().numpy())
-            loss.backward()
-            optimizer.step()
+            total_loss = 0
+            for i in range(x.shape[0]):
+                features = Variable(torch.FloatTensor(x[i].astype(np.float32)))
+                labels = Variable(torch.FloatTensor(y[i].astype(np.float32)))
+                features = torch.reshape(features, (features.shape[0], 1, features.shape[1]))
+                h_n = Variable(torch.zeros(self.model.num_layers, self.batch_size, self.model.hidden_shape))
+                c_n = Variable(torch.zeros(self.model.num_layers, self.batch_size, self.model.hidden_shape))
+
+                for j in range(0, x[i].shape[0]-x[i].shape[0]%self.batch_size, self.batch_size):
+                    features = Variable(torch.FloatTensor(x[i][j:j+self.batch_size].astype(np.float32)))
+                    labels = Variable(torch.FloatTensor(y[i][j:j+self.batch_size].astype(np.float32)))
+                    features = torch.reshape(features, (features.shape[0], 1, features.shape[1]))
+
+                    pred, h_n, c_n = self.model.forward(features, h_n, c_n)
+                    h_n = h_n.detach()
+                    c_n = c_n.detach()
+                    l1reg = torch.tensor(0)
+                    optimizer.zero_grad()
+                    loss = criterion(pred, labels)
+                    if self.l1enable:
+                        for param in self.model.parameters():
+                            l1reg += torch.norm(param, 1).long()
+                        loss += l1reg
+                    loss.backward()
+                    optimizer.step()
+                    total_loss += loss.detach().numpy()
+            print('Epoch {}:\t train loss: {}'.format(epoch, total_loss / x.shape[0]))
+            avg_losses.append(total_loss / x.shape[0])
         return avg_losses
 
     def predict(self, data):
@@ -66,10 +94,12 @@ class LSTMHandler(Handler):
     def test(self, x, y):
         x = Variable(torch.FloatTensor(x))
         y = Variable(torch.FloatTensor(y))
+        h_0 = Variable(torch.zeros(self.model.num_layers, x.size(0), self.model.hidden_shape))
+        c_0 = Variable(torch.zeros(self.model.num_layers, x.size(0), self.model.hidden_shape))
 
         x = torch.reshape(x, (x.shape[0], 1, x.shape[1]))
         criterion = torch.nn.MSELoss()
-        pred = self.model.forward(x)
+        pred, _, _ = self.model.forward(x, h_0, c_0)
         loss = criterion(pred, y)
         return loss, pred
 

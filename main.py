@@ -93,11 +93,11 @@ if __name__ == '__main__':
             lstm.test(test_features, test_targets)
     elif method == 'by_category':
         if 'linear' in blocks or 'MLP' in blocks:
+            batch_size = 256
             train_features, train_targets, test_features, test_targets = gd.get_dataset_by_category("commodities", 0.9, aggregate_days=5, target_lookahead=2)
             train_features = np.concatenate(train_features).astype(np.float32)
             train_targets = np.concatenate(train_targets).astype(np.float32)
         if 'linear' in blocks:
-            batch_size = 256
             print('----- Linear -----')
             linear = LinearHandler(100, "MSE", None, 0.01, batch_size)
             linear.create_model(train_features.shape[1], 1)
@@ -144,11 +144,12 @@ if __name__ == '__main__':
                                                                                                     aggregate_days=1,
                                                                                                     target_lookahead=2)
             # aggregate the training set together, no need to differentiate between the different sets during training
-            train_features = np.concatenate(train_features).astype(np.float32)
-            train_targets = np.concatenate(train_targets).astype(np.float32)
+            # train_features = np.concatenate(train_features).astype(np.float32)
+            # train_targets = np.concatenate(train_targets).astype(np.float32)
             print('\n\n\n----- LSTM -----')
-            lstm = LSTMHandler(100, "MSE", None, 0.01, 0)
-            lstm.create_model(train_features.shape[1], 15, 1, 1)
+            batch_size = 256
+            lstm = LSTMHandler(100, "MSE", None, 0.01, batch_size)
+            lstm.create_model(train_features[0].shape[1], 15, 1, 1)
             lstm_losses = lstm.train(train_features, train_targets)
             # plt.figure(0)
             # plt.title("lstm Loss")
@@ -163,12 +164,20 @@ if __name__ == '__main__':
                 _predictions.append(pred.detach().numpy())
             lstm_performance = model_trading(test_targets, _predictions, lookahead=2)
             best_possible_performance = model_trading(test_targets, test_targets, lookahead=2)
+        max_size = max(lstm_performance.shape[0], linear_performance.shape[0], mlp_performance.shape[0])
+        lstm_key = np.linspace(0, lstm_performance.shape[0], max_size)
+        # lstm_performance = np.interp(lstm_performance, lstm_key)
+        lstm_performance = np.interp(lstm_key, np.arange(lstm_performance.shape[0]), lstm_performance)
+        linear_key = np.linspace(0, linear_performance.shape[0], max_size)
+        linear_performance = np.interp(linear_key, np.arange(linear_performance.shape[0]), linear_performance)
+        mlp_key = np.linspace(0, mlp_performance.shape[0], max_size)
+        mlp_performance = np.interp(mlp_key, np.arange(mlp_performance.shape[0]), mlp_performance)
 
-        plt.plot(lstm_performance[::5], c='r', label='LSTM')
-        plt.plot(linear_performance[::2], c='b', label='Linear')
+        plt.plot(lstm_performance, c='r', label='LSTM')
+        plt.plot(linear_performance, c='b', label='Linear')
         plt.plot(mlp_performance, c='g', label='MLP')
         plt.legend()
         plt.xlabel('Time')
         plt.ylabel('Growth Ratio')
-        plt.title('Cumulative Returns - MSE')
+        plt.title('Cumulative Returns - Sharpe Loss')
         plt.show()

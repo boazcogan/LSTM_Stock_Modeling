@@ -23,15 +23,19 @@ class Linear(torch.nn.Module):
         """
         super(Linear, self).__init__()
         self.linear = torch.nn.Linear(input_size, output_size)
+        self.dropout = torch.nn.Dropout(0.5)
+        self.tanh = torch.nn.Tanh()
 
     def forward(self, x):
         out = self.linear(x)
-        return out
+        dropout = self.dropout(out)
+        activ = self.tanh(dropout)
+        return activ
 
 
 class LinearHandler(Handler):
-    def __init__(self, epochs, loss_method, regularization_method, learning_rate, batch_size):
-        super(LinearHandler, self).__init__(epochs, loss_method, regularization_method, learning_rate, batch_size)
+    def __init__(self, epochs, loss_method, regularization_method, learning_rate, batch_size, l1enable=False):
+        super(LinearHandler, self).__init__(epochs, loss_method, regularization_method, learning_rate, batch_size, l1enable)
 
     def create_model(self, input_shape, output_shape):
         self.model = Linear(input_shape, output_shape)
@@ -43,7 +47,7 @@ class LinearHandler(Handler):
             criterion = MyCustomLoss(method="sharpe")
         else:
             print("Loss method not recognized, defaulting to MSE")
-            criterion = mse_loss
+            criterion = sharpe_loss
         optimizer = torch.optim.Adam(self.model.parameters(), self.learning_rate)
         # inputs = Variable(torch.from_numpy(x))
         # labels = Variable(torch.from_numpy(y))
@@ -53,8 +57,13 @@ class LinearHandler(Handler):
             for i in range(0, x.shape[0], self.batch_size):
                 inputs = Variable(torch.from_numpy(x[i:i+self.batch_size]))
                 labels = Variable(torch.from_numpy(y[i:i+self.batch_size]))
+                l1reg = torch.tensor(0)
                 outputs = self.model(inputs)
                 loss = criterion(outputs, labels)
+                if self.l1enable:
+                    for param in self.model.parameters():
+                        l1reg += torch.norm(param, 1).long()
+                    loss += l1reg
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()

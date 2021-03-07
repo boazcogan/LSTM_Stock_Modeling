@@ -15,28 +15,33 @@ class MLP(torch.nn.Module):
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.fc1 = torch.nn.Linear(self.input_size, self.hidden_size)
+        self.dropout1 = torch.nn.Dropout(0.5)
         self.tanh = torch.nn.Tanh()
         self.fc2 = torch.nn.Linear(self.hidden_size, output_size)
+        self.dropout2 = torch.nn.Dropout(0.5)
         self.sigmoid = torch.nn.Sigmoid()
 
     def forward(self, x):
         hidden = self.fc1(x)
-        relu = self.tanh(hidden)
-        out = self.fc2(relu)
-        out = self.sigmoid(out)
+        dropout1 = self.dropout1(hidden)
+        relu = self.tanh(dropout1)
+        fc2 = self.fc2(relu)
+        dropout2 = self.dropout2(fc2)
+        out = self.sigmoid(dropout2)
         return out
 
 
 class MLPHandler(Handler):
 
-    def __init__(self, epochs, loss_method, regularization_method, learning_rate, batch_size):
-        super(MLPHandler, self).__init__(epochs, loss_method, regularization_method, learning_rate, batch_size)
+    def __init__(self, epochs, loss_method, regularization_method, learning_rate, batch_size, l1enable=False):
+        super(MLPHandler, self).__init__(epochs, loss_method, regularization_method, learning_rate, batch_size, l1enable)
 
     def create_model(self, input_shape, hidden_shape, output_shape):
         self.model = MLP(input_shape, hidden_shape, output_shape)
 
     def train(self, x, y):
-        criterion = mse_loss
+        alpha = 0.01
+        criterion = sharpe_loss
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
         self.model.eval()
         # y_pred = self.model(x)
@@ -50,11 +55,16 @@ class MLPHandler(Handler):
             for i in range(0, x.shape[0], self.batch_size):
                 features = torch.FloatTensor(x[i:i+self.batch_size])
                 labels = torch.FloatTensor(y[i:i+self.batch_size])
+                l1reg = torch.tensor(0)
                 optimizer.zero_grad()
                 # Forward pass
                 y_pred = self.model(features)
                 # Compute Loss
                 loss = criterion(y_pred.squeeze(), labels)
+                if self.l1enable:
+                    for param in self.model.parameters():
+                        l1reg += torch.norm(param, 1).long()
+                    loss += l1reg
 
                 # print('Epoch {}:\t train loss: {}'.format(epoch, loss.item()))
                 # avg_losses.append(loss.item())
