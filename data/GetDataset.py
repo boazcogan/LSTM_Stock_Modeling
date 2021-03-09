@@ -29,10 +29,6 @@ def get_aggregated_dataset(name, n, t, ratio):
     for f in dataset:
         # get the features and targets from the file
         features, targets = parse_file(f, n, t)
-        # shuffle by key so that features and targets can be split in unison. Shuffle them so that they're
-        # randomly split into training and testing groups independent of time location
-        #shuffle_key = np.arange(features.shape[0])
-        #np.random.shuffle(shuffle_key)
         if features.shape[0]:
             if train_x is None:
                 train_x = features[:int(ratio * features.shape[0])]
@@ -43,12 +39,6 @@ def get_aggregated_dataset(name, n, t, ratio):
             train_y = np.concatenate((train_y, targets[:int(ratio*features.shape[0])]))
             test_x = np.concatenate((test_x, features[int(ratio * features.shape[0]):]))
             test_y = np.concatenate((test_y, targets[int(ratio*features.shape[0]):]))
-    # shuffle one more time to mix the training set so that we dont train one file at a time.
-    # shuffle_key = np.arange(train_x.shape[0])
-    # np.random.shuffle(shuffle_key)
-    # train_x = train_x[shuffle_key]
-    # reshape the labels into column vectors
-    # train_y = train_y[shuffle_key].reshape(-1, 1)
     train_y = train_y.reshape(-1, 1)
     test_y = test_y.reshape(-1, 1)
     return train_x.astype(np.float32), train_y.astype(np.float32), test_x.astype(np.float32), test_y.astype(np.float32)
@@ -83,7 +73,7 @@ def parse_file(filename, n, t):
     data = data[:, 1:]
     features = []
     targets = []
-    # lose one datapoint because I am lazy and to make sure that we have room to look ahead for all points as well
+    # lose one datapoint to make sure that we have room to look ahead for all points as well
     # as fully a fully populated dataset
     end_itr = data.shape[0]-(n+t)
     for i in range(0, end_itr, n):
@@ -213,8 +203,8 @@ def parse_raw_features_targets(f):
     data = pd.read_csv(f"data/CLCDATA/{f}", header=None).to_numpy()
     # dont need dates, they can be trimmed
     data = data[:, 1:]
-    # let the features be the data and the targets be the volume, to keep it from getting too easy lets remove open
-    # interest
+    # let the features be the data and the targets be the volume,
+    # to keep it from getting too easy lets remove open interest
     # the features are open, high, low, close
     features = data[:, :4]
     # targets are volume

@@ -3,7 +3,6 @@ from src import *
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
-# from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 
 def model_trading(actual, preds, lookahead):
@@ -56,14 +55,10 @@ if __name__ == '__main__':
             plt.plot(linear_losses)
             plt.show()
             linear_MSE, predictions = linear.test(test_features, test_targets)
-            # print(f"\nThe MSE for the Linear test set is: {linear.test(test_features, test_targets)}\n\n")
 
         if 'MLP' in blocks:
             print('\n\n\n----- MLP -----')
             mlp = MLPHandler(100, "MSE", None, 0.01, batch_size)
-            # they never specify the number of hidden nodes
-            # page 6: "a 2-layer neural network can be used to incorporate non-linear effects."
-            # Looks like just 1 hidden + 1 output
             mlp.create_model(train_features.shape[1], 15, 1)
             mlp_losses = mlp.train(train_features, np.squeeze(train_targets))
             plt.figure(0)
@@ -74,7 +69,6 @@ if __name__ == '__main__':
             plt.plot(mlp_losses)
             plt.show()
             MLP_MSE, predictions = mlp.test(test_features, np.squeeze(test_targets))
-            # print(f"\nThe MSE for the MLP test set is: {linear.test(test_features, np.squeeze(test_targets))}\n\n")
 
         if 'LSTM' in blocks:
             train_features, train_targets, test_features, test_targets = gd.get_normal_dataset("commodities", 0.9, 7, normalize=True)
@@ -89,7 +83,6 @@ if __name__ == '__main__':
             plt.xlabel("epoch")
             plt.plot(lstm_losses)
             plt.show()
-            # print(f"\nThe MSE for the LSTM test set is: {linear.test(test_features, test_targets)}\n\n")
             lstm.test(test_features, test_targets)
     elif method == 'by_category':
         if 'linear' in blocks or 'MLP' in blocks:
@@ -102,41 +95,22 @@ if __name__ == '__main__':
             linear = LinearHandler(100, "MSE", None, 0.01, batch_size)
             linear.create_model(train_features.shape[1], 1)
             linear_losses = linear.train(train_features, train_targets)
-            # plt.figure(0)
-            # plt.title("Linear Loss")
-            # plt.ylabel("loss")
-            # plt.yscale('log')
-            # plt.xlabel("epoch")
-            # plt.plot(linear_losses)
-            # plt.show()
             _predictions = []
             for i in range(test_features.shape[0]):
                 _, pred = linear.test(test_features[i].astype(np.float32), test_targets[i].astype(np.float32))
                 _predictions.append(pred.detach().numpy())
             linear_performance = model_trading(test_targets, _predictions, lookahead=2)
-            # print(f"\nThe MSE for the Linear test set is: {linear.test(test_features, test_targets)}\n\n")
 
         if 'MLP' in blocks:
             print('\n\n\n----- MLP -----')
             mlp = MLPHandler(100, "MSE", None, 0.01, batch_size)
-            # they never specify the number of hidden nodes
-            # page 6: "a 2-layer neural network can be used to incorporate non-linear effects."
-            # Looks like just 1 hidden + 1 output
             mlp.create_model(train_features.shape[1], 15, 1)
             mlp_losses = mlp.train(train_features, np.squeeze(train_targets))
-            # plt.figure(0)
-            # plt.title("MLP Loss")
-            # plt.ylabel("loss")
-            # plt.yscale('log')
-            # plt.xlabel("epoch")
-            # plt.plot(mlp_losses)
-            # plt.show()
             _predictions = []
             for i in range(test_features.shape[0]):
                 _, pred = mlp.test(test_features[i].astype(np.float32), np.squeeze(test_targets[i].astype(np.float32)))
                 _predictions.append(pred.detach().numpy())
             mlp_performance = model_trading(test_targets, _predictions, lookahead=2)
-            # print(f"\nThe MSE for the MLP test set is: {linear.test(test_features, np.squeeze(test_targets))}\n\n")
 
         if 'LSTM' in blocks:
             _predictions = []
@@ -144,21 +118,11 @@ if __name__ == '__main__':
                                                                                                     aggregate_days=1,
                                                                                                     target_lookahead=2)
             # aggregate the training set together, no need to differentiate between the different sets during training
-            # train_features = np.concatenate(train_features).astype(np.float32)
-            # train_targets = np.concatenate(train_targets).astype(np.float32)
             print('\n\n\n----- LSTM -----')
             batch_size = 256
             lstm = LSTMHandler(100, "MSE", None, 0.01, batch_size)
             lstm.create_model(train_features[0].shape[1], 15, 1, 1)
             lstm_losses = lstm.train(train_features, train_targets)
-            # plt.figure(0)
-            # plt.title("lstm Loss")
-            # plt.ylabel("loss")
-            # # plt.yscale('log')
-            # plt.xlabel("epoch")
-            # plt.plot(np.squeeze(lstm_losses))
-            # plt.show()
-            # print(f"\nThe MSE for the LSTM test set is: {linear.test(test_features, test_targets)}\n\n")
             for i in range(test_features.shape[0]):
                 _, pred = lstm.test(test_features[i].astype(np.float32), test_targets[i].astype(np.float32))
                 _predictions.append(pred.detach().numpy())
