@@ -50,9 +50,6 @@ class MLPHandler(Handler):
             raise Exception("Invalid loss method")
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
         self.model.eval()
-        # y_pred = self.model(x)
-        # before_train = criterion(y_pred.squeeze(), y)
-        # print('Test loss before training', before_train.item())
         self.model.train()
         avg_losses = []
 
@@ -72,8 +69,6 @@ class MLPHandler(Handler):
                         l1reg += torch.norm(param, 1).long()
                     loss += self.alpha * l1reg
 
-                # print('Epoch {}:\t train loss: {}'.format(epoch, loss.item()))
-                # avg_losses.append(loss.item())
                 # Backward pass
                 loss.backward()
                 optimizer.step()
@@ -91,8 +86,6 @@ class MLPHandler(Handler):
         return loss, y_pred
 
 def return_loss(inputs, target):
-    # page 3, equation 1: sig_t^i is the ex-ante volatility estimate
-    # not sure how to implement in our context; dividing by 1 where sig_t^i should be'
     volatility_scaling = 1
     sig_tgt = .15
     return torch.mean(np.sign(target) * inputs) * -1

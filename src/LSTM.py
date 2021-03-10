@@ -21,14 +21,8 @@ class LSTM(torch.nn.Module):
         self.dropout1 = torch.nn.Dropout(0.5)
         self.dropout2 = torch.nn.Dropout(0.5)
         self.tanh = torch.nn.Tanh()
-        # self.hidden_cell = (torch.zeros(1, 1, self.hidden_shape),
-        #                     torch.zeros(1, 1, self.hidden_shape))
 
     def forward(self, x, h_n, c_n):
-        # hidden state
-        # h_0 = Variable(torch.zeros(self.num_layers, x.size(0), self.hidden_shape))
-        # current state
-        # c_0 = Variable(torch.zeros(self.num_layers, x.size(0), self.hidden_shape))
         output, (h_n, c_n) = self.lstm(x, (h_n, c_n))
         output = output.view(-1, self.hidden_shape)
         dropout1 = self.dropout1(output)
@@ -47,10 +41,6 @@ class LSTMHandler(Handler):
         self.model = LSTM(input_shape, hidden_shape, output_shape, num_layers)
 
     def train(self, x, y):
-        # x = Variable(torch.FloatTensor(x))
-        # y = Variable(torch.FloatTensor(y))
-        #
-        # x = torch.reshape(x, (x.shape[0], 1, x.shape[1]))
         avg_losses = []
         if self.loss_method == 'MSE':
             criterion = mse_loss
@@ -120,8 +110,6 @@ class LSTMHandler(Handler):
         return loss, np.array(preds)
 
 def return_loss(inputs, target):
-    # page 3, equation 1: sig_t^i is the ex-ante volatility estimate
-    # not sure how to implement in our context; dividing by 1 where sig_t^i should be'
     volatility_scaling = 1
     sig_tgt = .15
     return torch.mean(np.sign(target) * inputs) * -1
