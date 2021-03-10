@@ -40,8 +40,8 @@ class LSTM(torch.nn.Module):
 
 
 class LSTMHandler(Handler):
-    def __init__(self, epochs, loss_method, regularization_method, learning_rate, batch_size, l1enable=False):
-        super(LSTMHandler, self).__init__(epochs, loss_method, regularization_method, learning_rate, batch_size, l1enable)
+    def __init__(self, epochs, loss_method, regularization_method, learning_rate, batch_size, l1enable=False, alpha=0.01):
+        super(LSTMHandler, self).__init__(epochs, loss_method, regularization_method, learning_rate, batch_size, l1enable, alpha)
 
     def create_model(self, input_shape, hidden_shape, output_shape, num_layers):
         self.model = LSTM(input_shape, hidden_shape, output_shape, num_layers)
@@ -52,7 +52,14 @@ class LSTMHandler(Handler):
         #
         # x = torch.reshape(x, (x.shape[0], 1, x.shape[1]))
         avg_losses = []
-        criterion = sharpe_loss
+        if self.loss_method == 'MSE':
+            criterion = mse_loss
+        elif self.loss_method == 'Returns':
+            criterion = return_loss
+        elif self.loss_method == 'Sharpe':
+            criterion = sharpe_loss
+        else:
+            raise Exception("Invalid loss method")
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
         for epoch in range(self.epochs):
             total_loss = 0
@@ -63,7 +70,7 @@ class LSTMHandler(Handler):
                 h_n = Variable(torch.zeros(self.model.num_layers, self.batch_size, self.model.hidden_shape))
                 c_n = Variable(torch.zeros(self.model.num_layers, self.batch_size, self.model.hidden_shape))
 
-                for j in range(0, x[i].shape[0]-x[i].shape[0]%self.batch_size, self.batch_size):
+                for j in range(0, x[i].shape[0]-x[i].shape[0] % self.batch_size, self.batch_size):
                     features = Variable(torch.FloatTensor(x[i][j:j+self.batch_size].astype(np.float32)))
                     labels = Variable(torch.FloatTensor(y[i][j:j+self.batch_size].astype(np.float32)))
                     features = torch.reshape(features, (features.shape[0], 1, features.shape[1]))
@@ -77,7 +84,7 @@ class LSTMHandler(Handler):
                     if self.l1enable:
                         for param in self.model.parameters():
                             l1reg += torch.norm(param, 1).long()
-                        loss += l1reg
+                        loss += self.alpha * l1reg
                     loss.backward()
                     optimizer.step()
                     total_loss += loss.detach().numpy()
@@ -92,16 +99,25 @@ class LSTMHandler(Handler):
         return pred
 
     def test(self, x, y):
-        x = Variable(torch.FloatTensor(x))
-        y = Variable(torch.FloatTensor(y))
-        h_0 = Variable(torch.zeros(self.model.num_layers, x.size(0), self.model.hidden_shape))
-        c_0 = Variable(torch.zeros(self.model.num_layers, x.size(0), self.model.hidden_shape))
-
-        x = torch.reshape(x, (x.shape[0], 1, x.shape[1]))
-        criterion = torch.nn.MSELoss()
-        pred, _, _ = self.model.forward(x, h_0, c_0)
-        loss = criterion(pred, y)
-        return loss, pred
+        #x = Variable(torch.FloatTensor(x))
+        #y = Variable(torch.FloatTensor(y))
+        h_n = Variable(torch.zeros(self.model.num_layers, 1, self.model.hidden_shape))
+        c_n = Variable(torch.zeros(self.model.num_layers, 1, self.model.hidden_shape))
+        total_loss = 0
+        preds = []
+        #x = torch.reshape(x, (x.shape[0], 1, x.shape[1]))
+        for i in range(x.shape[0]):
+            features = Variable(torch.FloatTensor([x[i]]))
+            targets = Variable(torch.FloatTensor([y[i]]))
+            features = torch.reshape(features, (features.shape[0], 1, features.shape[1]))
+            criterion = torch.nn.MSELoss()
+            pred, h_n, c_n = self.model.forward(features, h_n, c_n)
+            preds.append(pred.detach().numpy())
+            h_n = h_n.detach()
+            c_n = c_n.detach()
+            total_loss += criterion(pred, targets).detach().numpy()
+        loss = total_loss/x.shape[0]
+        return loss, np.array(preds)
 
 def return_loss(inputs, target):
     # page 3, equation 1: sig_t^i is the ex-ante volatility estimate

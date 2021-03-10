@@ -33,15 +33,21 @@ class MLP(torch.nn.Module):
 
 class MLPHandler(Handler):
 
-    def __init__(self, epochs, loss_method, regularization_method, learning_rate, batch_size, l1enable=False):
-        super(MLPHandler, self).__init__(epochs, loss_method, regularization_method, learning_rate, batch_size, l1enable)
+    def __init__(self, epochs, loss_method, regularization_method, learning_rate, batch_size, l1enable=False, alpha=0.01):
+        super(MLPHandler, self).__init__(epochs, loss_method, regularization_method, learning_rate, batch_size, l1enable, alpha)
 
     def create_model(self, input_shape, hidden_shape, output_shape):
         self.model = MLP(input_shape, hidden_shape, output_shape)
 
     def train(self, x, y):
-        alpha = 0.01
-        criterion = sharpe_loss
+        if self.loss_method == 'MSE':
+            criterion = mse_loss
+        elif self.loss_method == 'Returns':
+            criterion = return_loss
+        elif self.loss_method == 'Sharpe':
+            criterion = sharpe_loss
+        else:
+            raise Exception("Invalid loss method")
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
         self.model.eval()
         # y_pred = self.model(x)
@@ -64,7 +70,7 @@ class MLPHandler(Handler):
                 if self.l1enable:
                     for param in self.model.parameters():
                         l1reg += torch.norm(param, 1).long()
-                    loss += l1reg
+                    loss += self.alpha * l1reg
 
                 # print('Epoch {}:\t train loss: {}'.format(epoch, loss.item()))
                 # avg_losses.append(loss.item())

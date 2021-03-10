@@ -34,20 +34,21 @@ class Linear(torch.nn.Module):
 
 
 class LinearHandler(Handler):
-    def __init__(self, epochs, loss_method, regularization_method, learning_rate, batch_size, l1enable=False):
-        super(LinearHandler, self).__init__(epochs, loss_method, regularization_method, learning_rate, batch_size, l1enable)
+    def __init__(self, epochs, loss_method, regularization_method, learning_rate, batch_size, l1enable=False, alpha=0.01):
+        super(LinearHandler, self).__init__(epochs, loss_method, regularization_method, learning_rate, batch_size, l1enable, alpha)
 
     def create_model(self, input_shape, output_shape):
         self.model = Linear(input_shape, output_shape)
 
     def train(self, x, y):
-        if self.loss_method == "MSE":
-            criterion = torch.nn.MSELoss()
-        elif self.loss_method == "Custom_Sharpe":
-            criterion = MyCustomLoss(method="sharpe")
-        else:
-            print("Loss method not recognized, defaulting to MSE")
+        if self.loss_method == 'MSE':
+            criterion = mse_loss
+        elif self.loss_method == 'Returns':
+            criterion = return_loss
+        elif self.loss_method == 'Sharpe':
             criterion = sharpe_loss
+        else:
+            raise Exception("Invalid loss method")
         optimizer = torch.optim.Adam(self.model.parameters(), self.learning_rate)
         # inputs = Variable(torch.from_numpy(x))
         # labels = Variable(torch.from_numpy(y))
@@ -63,7 +64,7 @@ class LinearHandler(Handler):
                 if self.l1enable:
                     for param in self.model.parameters():
                         l1reg += torch.norm(param, 1).long()
-                    loss += l1reg
+                    loss += self.alpha * l1reg
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
@@ -86,6 +87,7 @@ class LinearHandler(Handler):
         loss = criterion(outputs, labels)
         return loss, outputs
 
+
 def return_loss(inputs, target):
     # page 3, equation 1: sig_t^i is the ex-ante volatility estimate
     # not sure how to implement in our context; dividing by 1 where sig_t^i should be'
@@ -93,14 +95,17 @@ def return_loss(inputs, target):
     sig_tgt = .15
     return torch.mean(np.sign(target) * inputs) * -1
 
+
 def mse_loss(output, target):
     volatility_scaling = 1
     loss = torch.mean((output - (target / volatility_scaling))**2)
     return loss
 
+
 def binary_loss(inputs, target):
     volatility_scaling = 1
     loss = torch.log(target)
+
 
 def sharpe_loss(inputs, target):
     n_days = 252
