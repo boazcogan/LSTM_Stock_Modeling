@@ -49,8 +49,6 @@ class LinearHandler(Handler):
             print("Loss method not recognized, defaulting to MSE")
             criterion = sharpe_loss
         optimizer = torch.optim.Adam(self.model.parameters(), self.learning_rate)
-        # inputs = Variable(torch.from_numpy(x))
-        # labels = Variable(torch.from_numpy(y))
         avg_losses = []
         for epoch in range(self.epochs):
             total_loss = 0
@@ -87,8 +85,6 @@ class LinearHandler(Handler):
         return loss, outputs
 
 def return_loss(inputs, target):
-    # page 3, equation 1: sig_t^i is the ex-ante volatility estimate
-    # not sure how to implement in our context; dividing by 1 where sig_t^i should be'
     volatility_scaling = 1
     sig_tgt = .15
     return torch.mean(np.sign(target) * inputs) * -1
