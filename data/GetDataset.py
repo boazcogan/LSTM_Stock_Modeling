@@ -186,10 +186,10 @@ def get_dataset_by_category(name, ratio, method='normalized_returns', target_loo
             test_y.append(targets[int(ratio * features.shape[0]):])
         train_y[i] = train_y[i].reshape(-1, 1)
         test_y[i] = test_y[i].reshape(-1, 1)
-    train_x = np.array(train_x)
-    train_y = np.array(train_y)
-    test_x = np.array(test_x)
-    test_y = np.array(test_y)
+    #train_x = np.array(train_x)
+    #train_y = np.array(train_y)
+    #test_x = np.array(test_x)
+    #test_y = np.array(test_y)
     return train_x, train_y, test_x, test_y
 
 

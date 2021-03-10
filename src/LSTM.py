@@ -52,7 +52,7 @@ class LSTMHandler(Handler):
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
         for epoch in range(self.epochs):
             total_loss = 0
-            for i in range(x.shape[0]):
+            for i in range(len(x)):
                 features = Variable(torch.FloatTensor(x[i].astype(np.float32)))
                 labels = Variable(torch.FloatTensor(y[i].astype(np.float32)))
                 features = torch.reshape(features, (features.shape[0], 1, features.shape[1]))
@@ -77,22 +77,16 @@ class LSTMHandler(Handler):
                     loss.backward()
                     optimizer.step()
                     total_loss += loss.detach().numpy()
-            print('Epoch {}:\t train loss: {}'.format(epoch, total_loss / x.shape[0]))
-            avg_losses.append(total_loss / x.shape[0])
+            print('Epoch {}:\t train loss: {}'.format(epoch, total_loss / len(x)))
+            avg_losses.append(total_loss / len(x))
         return avg_losses
-
-    def predict(self, data):
-        x = Variable(torch.FloatTensor(data))
-        x = torch.reshape(x, (x.shape[0], 1, x.shape[1]))
-        pred = self.model.forward(x)
-        return pred
 
     def test(self, x, y):
         h_n = Variable(torch.zeros(self.model.num_layers, 1, self.model.hidden_shape))
         c_n = Variable(torch.zeros(self.model.num_layers, 1, self.model.hidden_shape))
         total_loss = 0
         preds = []
-        for i in range(x.shape[0]):
+        for i in range(len(x)):
             features = Variable(torch.FloatTensor([x[i]]))
             targets = Variable(torch.FloatTensor([y[i]]))
             features = torch.reshape(features, (features.shape[0], 1, features.shape[1]))
@@ -102,6 +96,6 @@ class LSTMHandler(Handler):
             h_n = h_n.detach()
             c_n = c_n.detach()
             total_loss += criterion(pred, targets).detach().numpy()
-        loss = total_loss/x.shape[0]
+        loss = total_loss/len(x)
         return loss, np.array(preds)
 
