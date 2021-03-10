@@ -42,15 +42,15 @@ def model_trading(actual, preds, lookahead):
 
 
 if __name__ == '__main__':
-    batch_size = 512
-    blocks = ['LSTM', 'linear', 'MLP']
-    loss_function = 'MSE'
-    regularization = False
-    target_lookahead = 2
-    epochs = 1
-
+    from src.hyperparameters import *
+    plt_shape = []
+    prof_values = []
     if 'linear' in blocks or 'MLP' in blocks:
-        train_features, train_targets, test_features, test_targets = gd.get_dataset_by_category("commodities", 0.9, aggregate_days=5, target_lookahead=target_lookahead)
+        train_features, train_targets, test_features, test_targets = gd.get_dataset_by_category("commodities",
+                                                                                                0.9, aggregate_days=5,
+                                                                                                target_lookahead=target_lookahead,
+                                                                                                assets_to_view=features,
+                                                                                                normalize_data=normalize_data)
         train_features = [elem for elem in train_features if elem.shape[0] > 0]
         train_targets = [elem for elem in train_targets if elem.shape[0] > 0]
         train_features = np.concatenate(train_features).astype(np.float32)
@@ -67,7 +67,8 @@ if __name__ == '__main__':
             _, pred = linear.test(test_features[i].astype(np.float32), test_targets[i].astype(np.float32))
             _predictions.append(pred.detach().numpy())
         linear_performance, linear_profitability = model_trading(test_targets, _predictions, lookahead=target_lookahead)
-
+        plt_shape.append(linear_performance.shape[0])
+        prof_values.append(linear_profitability)
     if 'MLP' in blocks:
         print('\n\n\n----- MLP -----')
         mlp = MLPHandler(epochs, loss_function, None, 0.01, batch_size, l1enable=regularization)
@@ -81,12 +82,16 @@ if __name__ == '__main__':
             _, pred = mlp.test(test_features[i].astype(np.float32), np.squeeze(test_targets[i].astype(np.float32)))
             _predictions.append(pred.detach().numpy())
         mlp_performance, mlp_profitability = model_trading(test_targets, _predictions, lookahead=target_lookahead)
+        plt_shape.append(mlp_performance.shape[0])
+        prof_values.append(mlp_profitability)
 
     if 'LSTM' in blocks:
         _predictions = []
         train_features, train_targets, test_features, test_targets = gd.get_dataset_by_category("commodities", 0.9,
                                                                                                 aggregate_days=1,
-                                                                                                target_lookahead=2)
+                                                                                                target_lookahead=target_lookahead,
+                                                                                                assets_to_view=features,
+                                                                                                normalize_data=normalize_data)
         # aggregate the training set together, no need to differentiate between the different sets during training
         print('\n\n\n----- LSTM -----')
         lstm = LSTMHandler(epochs, loss_function, None, 0.01, batch_size, l1enable=regularization)
@@ -97,27 +102,32 @@ if __name__ == '__main__':
             _predictions.append(pred)
         lstm_performance, lstm_profitability = model_trading(test_targets, _predictions, lookahead=target_lookahead)
         best_possible_performance = model_trading(test_targets, test_targets, lookahead=2)
-    max_size = max(lstm_performance.shape[0], linear_performance.shape[0], mlp_performance.shape[0])
-    lstm_key = np.linspace(0, lstm_performance.shape[0], max_size)
-    lstm_performance = np.interp(lstm_key, np.arange(lstm_performance.shape[0]), lstm_performance)
-    linear_key = np.linspace(0, linear_performance.shape[0], max_size)
-    linear_performance = np.interp(linear_key, np.arange(linear_performance.shape[0]), linear_performance)
-    mlp_key = np.linspace(0, mlp_performance.shape[0], max_size)
-    mlp_performance = np.interp(mlp_key, np.arange(mlp_performance.shape[0]), mlp_performance)
+        plt_shape.append(lstm_performance.shape[0])
+        prof_values.append(lstm_profitability)
 
-    plt.plot(lstm_performance, c='r', label='LSTM')
-    plt.plot(linear_performance, c='b', label='Linear')
-    plt.plot(mlp_performance, c='g', label='MLP')
+    max_size = max(plt_shape)
+    if "LSTM" in blocks:
+        lstm_key = np.linspace(0, lstm_performance.shape[0], max_size)
+        lstm_performance = np.interp(lstm_key, np.arange(lstm_performance.shape[0]), lstm_performance)
+        plt.plot(lstm_performance, c='r', label='LSTM')
+    if "linear" in blocks:
+        linear_key = np.linspace(0, linear_performance.shape[0], max_size)
+        linear_performance = np.interp(linear_key, np.arange(linear_performance.shape[0]), linear_performance)
+        plt.plot(linear_performance, c='b', label='Linear')
+    if "MLP" in blocks:
+        mlp_key = np.linspace(0, mlp_performance.shape[0], max_size)
+        mlp_performance = np.interp(mlp_key, np.arange(mlp_performance.shape[0]), mlp_performance)
+        plt.plot(mlp_performance, c='g', label='MLP')
     plt.legend()
     plt.xlabel('Time')
     plt.ylabel('Growth Ratio')
-    plt.title('Cumulative Returns - MSE Loss')
+    plt.title(f'Cumulative Returns - {loss_function} Loss')
     plt.show()
-    prof_bars = ['Linear', 'MLP', 'LSTM']
-    prof_values = [linear_profitability, mlp_profitability, lstm_profitability]
-    plt.xticks(range(3), prof_bars)
+
+    prof_bars = blocks
+    plt.xticks(range(len(blocks)), prof_bars)
     plt.xlabel('Model')
     plt.ylabel("Profitability")
-    plt.title("Profitability of the Models - MSE")
-    plt.bar(range(3), prof_values)
+    plt.title(f"Profitability of the Models - {loss_function}")
+    plt.bar(range(len(blocks)), prof_values)
     plt.show()
