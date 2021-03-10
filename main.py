@@ -42,6 +42,7 @@ def model_trading(actual, preds, lookahead):
 
 
 if __name__ == '__main__':
+    torch.manual_seed(0)
     from src.hyperparameters import *
     plt_shape = []
     prof_values = []
