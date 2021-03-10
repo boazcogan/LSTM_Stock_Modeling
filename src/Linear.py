@@ -4,10 +4,9 @@ referenced source: https://towardsdatascience.com/linear-regression-with-pytorch
 """
 import torch
 from torch.autograd import Variable
-from src.CustomLoss import *
+import src.CustomLoss as CustomLoss
 from src.Handler import *
-import numpy as np
-from math import sqrt
+
 
 class Linear(torch.nn.Module):
     """
@@ -42,11 +41,11 @@ class LinearHandler(Handler):
 
     def train(self, x, y):
         if self.loss_method == 'MSE':
-            criterion = mse_loss
+            criterion = CustomLoss.mse_loss
         elif self.loss_method == 'Returns':
-            criterion = return_loss
+            criterion = CustomLoss.return_loss
         elif self.loss_method == 'Sharpe':
-            criterion = sharpe_loss
+            criterion = CustomLoss.sharpe_loss
         else:
             raise Exception("Invalid loss method")
         optimizer = torch.optim.Adam(self.model.parameters(), self.learning_rate)
@@ -73,9 +72,11 @@ class LinearHandler(Handler):
 
     def test(self, x, y):
         if self.loss_method == "MSE":
-            criterion = torch.nn.MSELoss()
+            criterion = CustomLoss.mse_loss
         elif self.loss_method == "Custom_Sharpe":
-            criterion = MyCustomLoss("sharpe_loss")
+            criterion = CustomLoss.sharpe_loss
+        elif self.loss_method == "Returns":
+            criterion = CustomLoss.return_loss
         else:
             print("Loss method not recognized, defaulting to MSE")
             criterion = torch.nn.MSELoss()
@@ -85,30 +86,3 @@ class LinearHandler(Handler):
         loss = criterion(outputs, labels)
         return loss, outputs
 
-
-def return_loss(inputs, target):
-    volatility_scaling = 1
-    sig_tgt = .15
-    return torch.mean(np.sign(target) * inputs) * -1
-
-
-def mse_loss(output, target):
-    volatility_scaling = 1
-    loss = torch.mean((output - (target / volatility_scaling))**2)
-    return loss
-
-
-def binary_loss(inputs, target):
-    volatility_scaling = 1
-    loss = torch.log(target)
-
-
-def sharpe_loss(inputs, target):
-    n_days = 252
-    # R_it is the return given by the targets
-    R_it = torch.sum(target ** 2) / len(inputs)
-
-    loss = torch.mean(inputs) * sqrt(n_days)
-    loss /= torch.sqrt(torch.abs(R_it - torch.mean(torch.pow(inputs, 2))))
-
-    return loss * -1

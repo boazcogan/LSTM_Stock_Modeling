@@ -6,8 +6,7 @@ from torch import nn
 from src.Handler import *
 from torch.autograd import Variable
 import numpy as np
-from math import sqrt
-from src.CustomLoss import MyCustomLoss
+import src.CustomLoss as CustomLoss
 
 
 class LSTM(torch.nn.Module):
@@ -43,11 +42,11 @@ class LSTMHandler(Handler):
     def train(self, x, y):
         avg_losses = []
         if self.loss_method == 'MSE':
-            criterion = mse_loss
+            criterion = CustomLoss.mse_loss
         elif self.loss_method == 'Returns':
-            criterion = return_loss
+            criterion = CustomLoss.return_loss
         elif self.loss_method == 'Sharpe':
-            criterion = sharpe_loss
+            criterion = CustomLoss.sharpe_loss
         else:
             raise Exception("Invalid loss method")
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
@@ -89,13 +88,10 @@ class LSTMHandler(Handler):
         return pred
 
     def test(self, x, y):
-        #x = Variable(torch.FloatTensor(x))
-        #y = Variable(torch.FloatTensor(y))
         h_n = Variable(torch.zeros(self.model.num_layers, 1, self.model.hidden_shape))
         c_n = Variable(torch.zeros(self.model.num_layers, 1, self.model.hidden_shape))
         total_loss = 0
         preds = []
-        #x = torch.reshape(x, (x.shape[0], 1, x.shape[1]))
         for i in range(x.shape[0]):
             features = Variable(torch.FloatTensor([x[i]]))
             targets = Variable(torch.FloatTensor([y[i]]))
@@ -109,26 +105,3 @@ class LSTMHandler(Handler):
         loss = total_loss/x.shape[0]
         return loss, np.array(preds)
 
-def return_loss(inputs, target):
-    volatility_scaling = 1
-    sig_tgt = .15
-    return torch.mean(np.sign(target) * inputs) * -1
-
-def mse_loss(output, target):
-    volatility_scaling = 1
-    loss = torch.mean((output - (target / volatility_scaling))**2)
-    return loss
-
-def binary_loss(inputs, target):
-    volatility_scaling = 1
-    loss = torch.log(target)
-
-def sharpe_loss(inputs, target):
-    n_days = 252
-    # R_it is the return given by the targets
-    R_it = torch.sum(target ** 2) / len(inputs)
-
-    loss = torch.mean(inputs) * sqrt(n_days)
-    loss /= torch.sqrt(torch.abs(R_it - torch.mean(torch.pow(inputs, 2))))
-
-    return loss * -1
