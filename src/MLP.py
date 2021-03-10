@@ -8,18 +8,20 @@ import src.CustomLoss as CustomLoss
 from torch.autograd import Variable
 
 
-
 class MLP(torch.nn.Module):
-
-    def __init__(self, input_size, hidden_size, output_size):
+    """
+    Multi-layer perceptron. As described in the academic paper it has a single hidden layer utilizes a dropout of 0.5
+    and uses the tanh activation function since we are looking at the direct outputs of the model.
+    """
+    def __init__(self, input_size, hidden_size, output_size, dropout):
         super(MLP, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.fc1 = torch.nn.Linear(self.input_size, self.hidden_size)
-        self.dropout1 = torch.nn.Dropout(0.5)
+        self.dropout1 = torch.nn.Dropout(dropout)
         self.tanh = torch.nn.Tanh()
         self.fc2 = torch.nn.Linear(self.hidden_size, output_size)
-        self.dropout2 = torch.nn.Dropout(0.5)
+        self.dropout2 = torch.nn.Dropout(dropout)
         self.sigmoid = torch.nn.Sigmoid()
 
     def forward(self, x):
@@ -33,9 +35,8 @@ class MLP(torch.nn.Module):
 
 
 class MLPHandler(Handler):
-
     def __init__(self, epochs, loss_method, regularization_method, learning_rate, batch_size, l1enable=False, alpha=0.01):
         super(MLPHandler, self).__init__(epochs, loss_method, regularization_method, learning_rate, batch_size, l1enable, alpha)
 
-    def create_model(self, input_shape, hidden_shape, output_shape):
-        self.model = MLP(input_shape, hidden_shape, output_shape)
+    def create_model(self, input_shape, hidden_shape, output_shape, dropout):
+        self.model = MLP(input_shape, hidden_shape, output_shape, dropout)

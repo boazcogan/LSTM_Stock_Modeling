@@ -40,7 +40,7 @@ def parse_file(filename, n, t, data_to_use, normalize_data=True):
 
     # define a mask to extract only the points we would like to use for training
     data_to_use = np.array(data_to_use)
-    mask = np.zeros(data.shape[1]).astype(int)
+    mask = np.zeros(data.shape[1]).astype(bool)
     mask[data_to_use] = 1
     mask = mask.tolist()*n
 
@@ -53,7 +53,7 @@ def parse_file(filename, n, t, data_to_use, normalize_data=True):
 
     # trim away all entries before the asset is available for trading
     start_index = 0
-    while start_index < len(features) and np.all(features[start_index][mask] == 0.0):
+    while start_index < len(features) and np.all(features[start_index] == 0.0):
         start_index += 1
     features = features[start_index:]
     features = np.array(features)

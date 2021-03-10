@@ -6,3 +6,6 @@ target_lookahead = 2
 epochs = 100
 features = (0, 1, 2, 3)
 normalize_data = True
+hidden_parameters = 15
+hidden_layers = 1
+dropout = 0.5
