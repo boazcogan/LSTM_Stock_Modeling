@@ -399,10 +399,9 @@ dropout = 0.5
 python main.py
 ```
 
-![Cumulative Returns]
-(https://github.com/boazcogan/LSTM_Stock_Modeling/blob/main/CumulativeReturnsMSE.png)
-![Profitability]
-(https://github.com/boazcogan/LSTM_Stock_Modeling/blob/main/ProfitabilityMSE.png)
+![Cumulative Returns](https://github.com/boazcogan/LSTM_Stock_Modeling/blob/main/CumulativeReturnsMSE.png)
+
+![Profitability](https://github.com/boazcogan/LSTM_Stock_Modeling/blob/main/ProfitabilityMSE.png)
  
 ### Further Reading
 This section includes the original paper and additional resources related to the experiment.
