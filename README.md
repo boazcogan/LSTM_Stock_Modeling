@@ -5,13 +5,15 @@
 2. CLC Dataset
 3. Code
 4. Replicating Our Results
+5. Further Improvements
+6. Further Reading
 
 ### Introduction
 Time series momentum, or trend momentum, is measured by a portfolio comprised of long assets that have had recent positive returns and short assets that have had recent negative returns. Academic evidence suggests that strategies that optimize time series momentum improve a portfolio's risk-adjusted returns.
 
 These time series momentum strategies have two main attributes, trend estimation and position sizing; and recent studies have implemented various supervised learning models to predict these components. These models, however, do not account for volatility and other risk characteristics, and require manual specifications.
 
-In *Enhancing Time Series Momentum Strategies Using Deep Neural Networks*, the authors propose Deep Momentum Networks (DMNs) as an approach to momentum strategy that improves on the shortcomings of prior supervised learning models. DMNs are intended to generate positions directly in a way that simultaneously learns both trend estimation and position sizing in the same function.
+In [Enhancing Time Series Momentum Strategies Using Deep Neural Networks](https://arxiv.org/pdf/1904.04912.pdf), the authors propose Deep Momentum Networks (DMNs) as an approach to momentum strategy that improves on the shortcomings of prior supervised learning models. DMNs are intended to generate positions directly in a way that simultaneously learns both trend estimation and position sizing in the same function.
 
 The authors investigated four common deep neural network architectures - linear regression, multilayer perceptron (MLP), WaveNet, and Long Short-Term Memory (LSTM) - and compared the generated positions to those calculated from existing momentum strategies. In our experimentation, we implemented three of the four network types, omitting WaveNet due to time constraints, and compared our predicted returns with those of the DMNs implemented by the authors.
 
@@ -22,16 +24,16 @@ The data used in the original paper and our experimentation can be accessed thro
 | --- | --- | --- | --- | --- | --- | --- |
 | 01/19/2010 | 83.07 | 83.07 | 83.07 | 83.07 | 14 | 145215 |
 
-For our experimentation, we read the contents of the CSVs for a given asset class into numpy arrays in the function `data.GetDataset.get_dataset_by_category()`. For simplicity, we truncated the data, so the features given to the networks only include the data for **Open, High, Low,** and **Close.**
+For our experimentation, we read the contents of the CSVs for a given asset class into numpy arrays in the function `data.GetDataset.get_dataset_by_category()`. We truncated the data for the sake of runtime and simplicity; so the features given to the networks only include the data for **Open, High, Low,** and **Close.**
 
 Not all neural networks are capable of inferring information from sequence data. To accommodate for systems with no short term memory, such as a linear model, 5 data-points were aggregated together. The LSTM does need the aggregated data-points since it contains a hidden and cell state which allow it to infer information from a sequence.
 
 ### Code
-*Enhancing Time Series Momentum Strategies Using Deep Neural Networks*  provides four loss functions: Mean Squared Error (MSE), Binary Cross Entropy (BCE), Loss of the returns, and Sharpe loss ratio. We have provided simple implementations of MSE, Loss of the returns, and Sharpe loss ratio with our code (`src.CustomLoss.py). Since we focused on utilizing our models direct outputs when simulating trading, we have not included an implementation for BCE. Unlike the academic paper our loss functions do not incorporate the volatility of the market.
+*Enhancing Time Series Momentum Strategies Using Deep Neural Networks*  provides four loss functions: Mean Squared Error (MSE), Binary Cross Entropy (BCE), Loss of the returns, and Sharpe loss ratio. We have provided simple implementations of MSE, Loss of the returns, and Sharpe loss ratio with our code (`src.CustomLoss.py`). Since we focused on utilizing our models direct outputs when simulating trading, we have not included an implementation for BCE. Unlike the academic paper our loss functions do not incorporate the volatility of the market.
 
-This code contains three models that have been implemented: a simple linear classifier, a multi-layer perceptron, and a Long Short Term Memory (LSTM) neural networks. Additionally, there is a template for another model as well as some architecture in place to make adding new models as easy as possible. Since all of the models utilize the same hyper-parameters, we can utilize one unified handler for the instantiation and training of the models. 
+This code contains three models that have been implemented: a simple linear classifier, a multi-layer perceptron, and a Long Short Term Memory (LSTM) neural networks. Additionally, there is a template for another model, as well as some architecture in place to make adding new models as easy as possible. Since all of the models utilize the same hyper-parameters, we can utilize one unified handler for the instantiation and training of the models.
 
-Let's begin by defining some hyperparameters for our code as well as call the functions provided in `data.GetDataset.py` to create our training and testing sets. Here we will use target lookahead to specify how far into the future we are trying to forecast the stock price for. The input to assets_to_view is a tuple of indices that we'll use to choose which datapoints we'd like to train the models on. For example if the tuple contains (0,2,5) then we will use the open, low, and volume as feature vectors to input to the model.
+Let's begin by defining some hyper-parameters for our code, as well as call the functions provided in `data.GetDataset.py` to create our training and testing sets. Here we will use target lookahead to specify how far into the future we are trying to forecast the stock price for. `assets_to_view` takes in a tuple of indices that we'll use to choose which datapoints we'd like to train the models on. For example if the tuple contains (0,2,5) then we will use the open, low, and volume as feature vectors to input to the model.
 ````python
 from src.hyperparameters import *
 train_features, train_targets, test_features, test_targets = gd.get_dataset_by_category("commodities",
@@ -40,7 +42,7 @@ train_features, train_targets, test_features, test_targets = gd.get_dataset_by_c
                                                                                         assets_to_view=features,
                                                                                         normalize_data=normalize_data)
 ````
-We've retrieved the dataset, but there are two issues with it. First, it is separated by stock giving it the shape [num_stocks, entries, features] whereas we would like it to have the shape [entries, features]. The second issue is that some of the stocks may not have had the ability to fulfil the aggregation and lookahead parameters, their entries in the dataset must be trimmed.
+We've retrieved the dataset, but there are two issues with it. First, it is separated by stock giving it the shape [num_stocks, entries, features] whereas we would like it to have the shape [entries, features]. The second issue is that some of the stocks may not have had the ability to fulfill the aggregation and lookahead parameters, their entries in the dataset must be trimmed.
 
 ````python
 train_features = [elem for elem in train_features if elem.shape[0] > 0]
@@ -112,7 +114,7 @@ These are the hyper-parameters that will be available to the models during train
 
 ````
 
-Now that we have a mechanism to manage the hyper-parameters and training of our models, I will demonstrate what it would take to implement a simple Linear model based on the one outlined in *Enhancing Time Series Momentum Strategies Using Deep Neural Networks*.
+Now that we have a mechanism to manage the hyper-parameters and training of our models, we will demonstrate what it would take to implement a simple Linear model based on the one outlined in *Enhancing Time Series Momentum Strategies Using Deep Neural Networks*.
 
 ````python
 class Linear(torch.nn.Module):
@@ -140,7 +142,7 @@ class Linear(torch.nn.Module):
 
 ````
 
-To finish off the code that we'll need for this model, all we need to do is create Handler class for it an it'll be ready to go.
+To finish off the code that we'll need for this model, all we need to do is create Handler class for it and it'll be ready to go.
 ````python
 
 class LinearHandler(Handler):
@@ -152,14 +154,14 @@ class LinearHandler(Handler):
 
 ````
 
-Finally we can get around to creating and training our Linear Classifier. 
+Finally we can get around to creating and training our Linear Classifier.
 ````python
 linear = LinearHandler(epochs, loss_function, None, 0.01, batch_size, l1enable=regularization)
 linear.create_model(train_features.shape[1], 1, dropout)
 linear_losses = linear.train(train_features, train_targets)
 ````
 
-Using the Handler superclass to impliment, instantiat, and train a MLP looks nearly identical, with the only difference being the structure of the model itself. It's implementation has been provided in the `src.MLP.py` code and the class for the model can be seen below.
+Using the Handler superclass to implement, instantiate, and train a MLP looks nearly identical, with the only difference being the structure of the model itself. Its implementation has been provided in the `src.MLP.py` code and the class for the model can be seen below.
 
 ````python
 
@@ -190,7 +192,7 @@ class MLP(torch.nn.Module):
 
 ````
 
-The architecture for an LSTM differs greatly from the linear and MLP models. The primary difference is that it is a form of a recurrent neural network, meaning that it feeds some of its parameters back into itself. In the case of the LSTM these parameters are the cell state and the hidden state. These two values give the model the capability to associate information across multiple data-points within a series and learn contextual information. As before, the default constructor will contain the basic structure of the model.
+The architecture for an LSTM differs greatly from the linear and MLP models. The primary difference is that it is a form of a recurrent neural network, meaning that it feeds some of its parameters back into itself. In the case of the LSTM, these parameters are the cell state and the hidden state. These two values give the model the capability to associate information across multiple data-points within a series and learn contextual information. As before, the default constructor will contain the basic structure of the model.
 ````python
 class LSTM(torch.nn.Module):
     """
@@ -232,7 +234,7 @@ However from this point on, the implementation differs greatly from the rest of 
 
 ````
 
-Although we can use the same Handler code to manage the hyper-parameters of the model, we'll need to revisit the training loop. The first difference is that the LSTM model trains on sequence data meaning that we'll need to indicate when we're in between sequences with the cell state and the hidden state. To accomplish this we'll need to adjust the shape of the inputs that we're passing into the model back to [stock, num_entries, features]. Documentation has been provided with the training code to help you follow along.
+Although we can use the same Handler code to manage the hyper-parameters of the model, we'll need to revisit the training loop. The first difference is that the LSTM model trains on sequence data meaning that we'll need to indicate when we're in between sequences with the cell state and the hidden state. To accomplish this, we'll need to adjust the shape of the inputs to be structured as [stock, num_entries, features]. Documentation has been provided with the training code to help you follow along.
 
 ````python
 
@@ -297,7 +299,7 @@ class LSTMHandler(Handler):
         return avg_losses
 
 ````
-We dont only need to adjust the outer shape of the dataset, we also need to get entries that have not been aggregated together as input. For that reason we're going to recall the `data.GetDataset.py` code to create a new dataset for training.
+We don't only need to adjust the outer shape of the dataset; we also need to get entries that have not been aggregated together as input. For that reason we're going to recall the `data.GetDataset.py` code to create a new dataset for training.
 
 ````python
 train_features, train_targets, test_features, test_targets = gd.get_dataset_by_category("commodities", 0.9,
@@ -313,11 +315,11 @@ lstm = LSTMHandler(epochs, loss_function, None, 0.01, batch_size, l1enable=regul
 lstm.create_model(train_features[0].shape[1], hidden_parameters, hidden_layers, 1, dropout)
 lstm_losses = lstm.train(train_features, train_targets)
 ````
- 
-The above code to create each of the models outlined has been provided in the `src` directory which also contains code to call in order to test the models. We'll use that testing code as we discuss evaluating our models. There are two metrics we've chosen from the academic paper to evaluate our models. The first is an auto-trading system that uses the signals retrieved from our models to purchase and sell stocks. The second is a measurement of profitability. Using the auto-trader profitability is the frequency that the model chooses to make a trade that results in a gain.
 
-A very simple auto-trader can be designed using an 'all eggs in one basket' approach. Such a system would simply look at all of the assets available at the current date, pick the asset with the highest expected return, and compute the actual return based on the chosen asset. For simplicities sake, once a transaction has been made, it cannot be reversed and the system must hold the asset until the forecast date is reached. We can also allow the model to choose not to trade for any given day in the event that all transactions would forecast a loss. Since the assets each have a different number of time-steps they are aligned such that they are all present on the final day of trading using the testing set.
- 
+The above code to create each of the models outlined has been provided in the `src` directory, which also contains code to test the models. We'll use that testing code as we discuss evaluating our models. There are two metrics we've chosen from the academic paper to evaluate our models. The first is an auto-trading system that uses the signals retrieved from our models to purchase and sell stocks. The second is a measurement of profitability. Using the auto-trader profitability is the frequency that the model chooses to make a trade that results in a gain.
+
+A very simple auto-trader can be designed using an 'all eggs in one basket' approach. Such a system would simply look at all of the assets available at the current date, pick the asset with the highest expected return, and compute the actual return based on the chosen asset. For simplicity's sake, once a transaction has been made, it cannot be reversed and the system must hold the asset until the forecast date is reached. We can also allow the model to choose not to trade for any given day in the event that all transactions would forecast a loss. Since the assets each have a different number of time-steps, they are aligned such that they are all present on the final day of trading using the testing set.
+
 ````python
 def model_trading(actual, preds, lookahead):
     """
@@ -366,8 +368,8 @@ def model_trading(actual, preds, lookahead):
         trading_route.append(trading_quantity)
     return np.array(trading_route), profitability/trades
 ````
- 
-Using this trading system we can get the predictions by testing each of the models and tracking their performance. Below is some example code of how to test the LSTM, note that the other dataset should be used when testing the Linear and MLP models:
+
+Using this trading system we can get the predictions by testing each of the models and tracking their performance. Below is some example code of how to test the LSTM. Note that the other dataset should be used when testing the Linear and MLP models:
 ````python
 # for each of the assets get the predictions and add them to a list
 for i in range(len(test_features)):
@@ -376,7 +378,7 @@ for i in range(len(test_features)):
 lstm_performance, lstm_profitability = model_trading(test_targets, _predictions, lookahead=target_lookahead)
 
 ````
-Note that if no transaction is made by the model at a time-step, then only one time-step will pass, whereas if a transaction is made by the model then however far the lookahead variable is will be added to the time-steps. What's more, the Linear and MLP models use an aggregated dataset meaning that they'll simply have less data available to them when testing. To plot all of the performances on the same graph, one should linearly interpolate missing values to the shorter models so that they can all be viewed at the same scale.
+If no transaction is made by the model at a time-step, then only one time-step will pass; whereas if a transaction is made by the model, then however far the lookahead variable is will be added to the time-steps. What's more, the Linear and MLP models use an aggregated dataset, meaning that they'll simply have less data available to them when testing. To plot all of the performances on the same graph, one should linearly interpolate missing values to the shorter models so that they can all be viewed at the same scale.
 
 Once again all of the above code has been provided within the `src/*`, `data/*`, and `main.py` files.
 
@@ -396,14 +398,21 @@ hidden_layers = 1
 dropout = 0.5
 ````
 
-```shell script
+```shell
 $ python main.py
 ```
 
 ![Cumulative Returns](https://github.com/boazcogan/LSTM_Stock_Modeling/blob/main/CumulativeReturnsMSE.png)
 
 ![Profitability](https://github.com/boazcogan/LSTM_Stock_Modeling/blob/main/ProfitabilityMSE.png)
- 
+
+### Further Improvements
+Due to both limited time and resources, we weren't able to execute an exact replication of the original experiments conducted in *Enhancing Time Series Momentum Strategies Using Deep Neural Networks*. There are a couple of improvements and extra steps we would take given the opportunity.
+
+First, the loss equations defined in the paper account for volatility by incorporating a fixed annualized volatility target, <img src="https://render.githubusercontent.com/render/math?math=\sigma_{tgt}">, and an ex-ante volatility estimate, <img src="https://render.githubusercontent.com/render/math?math=\sigma_{t}^{(i)}">. The authors defined <img src="https://render.githubusercontent.com/render/math?math=\sigma_{tgt}"> to be 0.15, but it is unclear how they define <img src="https://render.githubusercontent.com/render/math?math=\sigma_{t}^{(i)}">. We presume that the authors expect readers to have prior knowledge about ex-ante volatility, so we would need to conduct further research in order to accurately incorporate volatility in our experiments. Our current implementation therefore does not have any consideration for volatility. This is a significant factor to consider when comparing our results to those of the authors.
+
+Second, we did not attempt to implement WaveNet at this time. If we were to, however, we would be able to apply a great portion of the existing setup to WaveNets (e.g. hyper-parameters, handler method structure, etc.). But our existing understanding of WaveNet is somewhat lacking, such that we would need to dedicate time to researching the architecture before being able to implement it for this experiment.
+
 ### Further Reading
 This section includes the original paper and additional resources related to the experiment.
 #### Papers
