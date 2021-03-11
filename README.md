@@ -21,9 +21,9 @@ The data used in the original paper and our experimentation can be accessed thro
 | --- | --- | --- | --- | --- | --- | --- |
 | 01/19/2010 | 83.07 | 83.07 | 83.07 | 83.07 | 14 | 145215 |
 
-For our experimentation, we read the contents of the CSVs for a given asset class into numpy arrays in the function `data.GetDataset.get_aggregated_dataset()`. For simplicity, we truncated the data, so the features given to the networks only include the data for **Open, High, Low,** and **Close.**
+For our experimentation, we read the contents of the CSVs for a given asset class into numpy arrays in the function `data.GetDataset.get_dataset_by_category()`. For simplicity, we truncated the data, so the features given to the networks only include the data for **Open, High, Low,** and **Close.**
 
-LSTM networks, however, require sequence data, so the data given to our LSTM includes the same four columns, as well as the dates.
+Not all neural networks are capable of infering information from sequence data. To accommodate for systems with no short term memory, such as a linear model, 5 datapoints were aggregated together. The LSTM does need the aggregated datapoints since it contains a hidden and cell state which allow it to infer information from a sequence.
 
 ### Next Section
 

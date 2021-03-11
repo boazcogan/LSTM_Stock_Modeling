@@ -1,29 +1,27 @@
 """
-
-referenced source: https://towardsdatascience.com/linear-regression-with-pytorch-eb6dedead817
+referenced source: https://d2l.ai/
 """
 import torch
 from torch.autograd import Variable
-from src.CustomLoss import *
+import src.CustomLoss as CustomLoss
 from src.Handler import *
-import numpy as np
-from math import sqrt
+
 
 class Linear(torch.nn.Module):
     """
     The simplest example, a linear classifier.
     """
 
-    def __init__(self, input_size, output_size):
+    def __init__(self, input_size, output_size, dropout):
         """
-        Default consructor for the Linear classifier
-        :param input_size: the input shape to intantiate the model with
+        Default constructor for the Linear classifier
+        :param input_size: the input shape to instantiate the model with
         :param the output shape for the model
         :param epochs: the number of iterations to pass over the training data
         """
         super(Linear, self).__init__()
         self.linear = torch.nn.Linear(input_size, output_size)
-        self.dropout = torch.nn.Dropout(0.5)
+        self.dropout = torch.nn.Dropout(dropout)
         self.tanh = torch.nn.Tanh()
 
     def forward(self, x):
@@ -34,76 +32,8 @@ class Linear(torch.nn.Module):
 
 
 class LinearHandler(Handler):
-    def __init__(self, epochs, loss_method, regularization_method, learning_rate, batch_size, l1enable=False):
-        super(LinearHandler, self).__init__(epochs, loss_method, regularization_method, learning_rate, batch_size, l1enable)
+    def __init__(self, epochs, loss_method, regularization_method, learning_rate, batch_size, l1enable=False, alpha=0.01):
+        super(LinearHandler, self).__init__(epochs, loss_method, regularization_method, learning_rate, batch_size, l1enable, alpha)
 
-    def create_model(self, input_shape, output_shape):
-        self.model = Linear(input_shape, output_shape)
-
-    def train(self, x, y):
-        if self.loss_method == "MSE":
-            criterion = torch.nn.MSELoss()
-        elif self.loss_method == "Custom_Sharpe":
-            criterion = MyCustomLoss(method="sharpe")
-        else:
-            print("Loss method not recognized, defaulting to MSE")
-            criterion = sharpe_loss
-        optimizer = torch.optim.Adam(self.model.parameters(), self.learning_rate)
-        avg_losses = []
-        for epoch in range(self.epochs):
-            total_loss = 0
-            for i in range(0, x.shape[0], self.batch_size):
-                inputs = Variable(torch.from_numpy(x[i:i+self.batch_size]))
-                labels = Variable(torch.from_numpy(y[i:i+self.batch_size]))
-                l1reg = torch.tensor(0)
-                outputs = self.model(inputs)
-                loss = criterion(outputs, labels)
-                if self.l1enable:
-                    for param in self.model.parameters():
-                        l1reg += torch.norm(param, 1).long()
-                    loss += l1reg
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
-                total_loss += loss.item()
-            avg_losses.append(total_loss / x.size)
-            print('epoch {}:\t loss {}'.format(epoch, total_loss / x.size))
-        return avg_losses
-
-    def test(self, x, y):
-        if self.loss_method == "MSE":
-            criterion = torch.nn.MSELoss()
-        elif self.loss_method == "Custom_Sharpe":
-            criterion = MyCustomLoss("sharpe_loss")
-        else:
-            print("Loss method not recognized, defaulting to MSE")
-            criterion = torch.nn.MSELoss()
-        inputs = Variable(torch.from_numpy(x))
-        labels = Variable(torch.from_numpy(y))
-        outputs = self.model(inputs)
-        loss = criterion(outputs, labels)
-        return loss, outputs
-
-def return_loss(inputs, target):
-    volatility_scaling = 1
-    sig_tgt = .15
-    return torch.mean(np.sign(target) * inputs) * -1
-
-def mse_loss(output, target):
-    volatility_scaling = 1
-    loss = torch.mean((output - (target / volatility_scaling))**2)
-    return loss
-
-def binary_loss(inputs, target):
-    volatility_scaling = 1
-    loss = torch.log(target)
-
-def sharpe_loss(inputs, target):
-    n_days = 252
-    # R_it is the return given by the targets
-    R_it = torch.sum(target ** 2) / len(inputs)
-
-    loss = torch.mean(inputs) * sqrt(n_days)
-    loss /= torch.sqrt(torch.abs(R_it - torch.mean(torch.pow(inputs, 2))))
-
-    return loss * -1
+    def create_model(self, input_shape, output_shape, dropout):
+        self.model = Linear(input_shape, output_shape, dropout)
