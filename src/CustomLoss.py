@@ -22,7 +22,7 @@ def binary_loss(inputs, target):
 
 
 def sharpe_loss(inputs, target):
-    n_days = 252
+    n_days = len(inputs)
     # R_it is the return given by the targets
     R_it = torch.sum(target ** 2) / len(inputs)
 

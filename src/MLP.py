@@ -19,18 +19,18 @@ class MLP(torch.nn.Module):
         self.hidden_size = hidden_size
         self.fc1 = torch.nn.Linear(self.input_size, self.hidden_size)
         self.dropout1 = torch.nn.Dropout(dropout)
-        self.tanh = torch.nn.Tanh()
+        self.tanh1 = torch.nn.Tanh()
         self.fc2 = torch.nn.Linear(self.hidden_size, output_size)
         self.dropout2 = torch.nn.Dropout(dropout)
-        self.sigmoid = torch.nn.Sigmoid()
+        self.tanh2 = torch.nn.Sigmoid()
 
     def forward(self, x):
         hidden = self.fc1(x)
         dropout1 = self.dropout1(hidden)
-        relu = self.tanh(dropout1)
-        fc2 = self.fc2(relu)
+        tanh1 = self.tanh1(dropout1)
+        fc2 = self.fc2(tanh1)
         dropout2 = self.dropout2(fc2)
-        out = self.sigmoid(dropout2)
+        out = self.tanh2(dropout2)
         return out
 
 
