@@ -3,7 +3,8 @@
 ### Sections
 1. Introduction
 2. CLC Dataset
-3.
+3. Code
+4. Replicating Our Results
 
 ### Introduction
 Time series momentum, or trend momentum, is measured by a portfolio comprised of long assets that have had recent positive returns and short assets that have had recent negative returns. Academic evidence suggests that strategies that optimize time series momentum improve a portfolio's risk-adjusted returns.
@@ -379,7 +380,7 @@ Note that if no transaction is made by the model at a time-step, then only one t
 
 Once again all of the above code has been provided within the `src/*`, `data/*`, and `main.py` files.
 
-### Replicating our experiments
+### Replicating Our Results
 The hyper-parameters used by our models can be found and changed within the `src.hyperparameters.py` file. Simply running `main.py` will replicate our experiments using the hyper-parameter file. Although we have frozen the random seed, Pytorch does not guarantee complete reproducibility. Below you'll find the hyper-parameters we used to achieve our best results:
 ````python
 batch_size = 512
@@ -395,7 +396,13 @@ hidden_layers = 1
 dropout = 0.5
 ````
 
+```shell script
+$ python main.py
+```
 
+![Cumulative Returns](https://github.com/boazcogan/LSTM_Stock_Modeling/blob/main/CumulativeReturnsMSE.png)
+
+![Profitability](https://github.com/boazcogan/LSTM_Stock_Modeling/blob/main/ProfitabilityMSE.png)
  
 ### Further Reading
 This section includes the original paper and additional resources related to the experiment.
