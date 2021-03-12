@@ -28,6 +28,8 @@ For our experimentation, we read the contents of the CSVs for a given asset clas
 
 Not all neural networks are capable of inferring information from sequence data. To accommodate for systems with no short term memory, such as a linear model, 5 data-points were aggregated together. The LSTM does need the aggregated data-points since it contains a hidden and cell state which allow it to infer information from a sequence.
 
+***To replicate any of the following experiments using our code, please download the CLC Dataset and add a folder labeled CLCData to the data folder.***
+
 ### Code
 *Enhancing Time Series Momentum Strategies Using Deep Neural Networks*  provides four loss functions: Mean Squared Error (MSE), Binary Cross Entropy (BCE), Loss of the returns, and Sharpe loss ratio. We have provided simple implementations of MSE, Loss of the returns, and Sharpe loss ratio with our code (`src.CustomLoss.py`). Since we focused on utilizing our models direct outputs when simulating trading, we have not included an implementation for BCE. Unlike the academic paper our loss functions do not incorporate the volatility of the market.
 
